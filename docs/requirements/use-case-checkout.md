@@ -1,6 +1,6 @@
 # Đặc tả use-case UC-04: Đặt và thanh toán đơn hàng
 
-Sơ đồ: `docs/diagrams/usecase-checkout.puml`
+Sơ đồ: `docs/diagrams/usecase-checkout.puml` (ảnh: `docs/diagrams/usecase-checkout.svg`)
 
 ## 1. Thông tin chung
 

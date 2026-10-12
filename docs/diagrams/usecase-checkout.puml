@@ -1,25 +1,28 @@
 @startuml usecase-checkout
-left to right direction
+top to bottom direction
 skinparam packageStyle rectangle
+skinparam nodesep 40
+skinparam ranksep 50
 
 actor Customer
 actor "Payment Service" as PS
 
 rectangle "<<Business>>BrewLite" {
   usecase "Đặt và thanh toán đơn hàng" as UC04
+  usecase "Xác thực người dùng" as UCA
   usecase "Tạo đơn hàng" as UCO
   usecase "Thanh toán đơn" as UCP
-  usecase "Xác thực người dùng" as UCA
   usecase "Kiểm tra tồn kho" as UCS
   usecase "Áp mã khuyến mãi" as UCD
 }
 
-Customer -- UC04
-UCP -- PS
-
-UC04 .> UCO : <<include>>
-UC04 .> UCP : <<include>>
-UC04 .> UCA : <<include>>
-UCO .> UCS : <<include>>
-UCD .> UCO : <<extend>>
+Customer -right- UC04
+UC04 .down.> UCA : <<include>>
+UC04 .down.> UCO : <<include>>
+UC04 .down.> UCP : <<include>>
+UCA -[hidden]right- UCO
+UCO -[hidden]right- UCP
+UCO .down.> UCS : <<include>>
+UCD .up.> UCO : <<extend>>
+UCP -right- PS
 @enduml
