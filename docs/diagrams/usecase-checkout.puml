@@ -1,0 +1,25 @@
+@startuml usecase-checkout
+left to right direction
+skinparam packageStyle rectangle
+
+actor Customer
+actor "Payment Service" as PS
+
+rectangle "<<Business>>BrewLite" {
+  usecase "Đặt và thanh toán đơn hàng" as UC04
+  usecase "Tạo đơn hàng" as UCO
+  usecase "Thanh toán đơn" as UCP
+  usecase "Xác thực người dùng" as UCA
+  usecase "Kiểm tra tồn kho" as UCS
+  usecase "Áp mã khuyến mãi" as UCD
+}
+
+Customer -- UC04
+UCP -- PS
+
+UC04 .> UCO : <<include>>
+UC04 .> UCP : <<include>>
+UC04 .> UCA : <<include>>
+UCO .> UCS : <<include>>
+UCD .> UCO : <<extend>>
+@enduml
