@@ -20,8 +20,8 @@ Phiên bản 1.0. Ưu tiên theo MoSCoW: **Must**, **Should**, **Could**, **Won'
 | FR-12 | Khách xem lịch sử các đơn của mình | Should | `GET /orders` trả danh sách đơn của chính người dùng, mới nhất trước |
 | FR-13 | Nhân viên quầy cập nhật trạng thái đơn (PREPARING, READY, COMPLETED, CANCELLED) | Should | Chỉ vai trò nhân viên gọi được; chuyển trạng thái sai thứ tự bị từ chối; khách thấy trạng thái mới khi tải lại |
 | FR-14 | Hệ thống tích điểm thành viên sau đơn đã thanh toán | Could | Điểm của người dùng tăng đúng quy tắc sau thanh toán thành công; có bản ghi giao dịch điểm |
-| FR-15 | Quản lý tạo, sửa, xóa sản phẩm và khuyến mãi qua giao diện quản trị | Won't | Ngoài phạm vi MVP |
-| FR-16 | Thanh toán thật qua cổng ngân hàng hoặc ví điện tử | Won't | Ngoài phạm vi MVP |
+| FR-15 | Quản lý tạo, sửa, xóa sản phẩm và khuyến mãi qua giao diện quản trị | Won't | Kiểm chứng phủ định: bản MVP không có API và giao diện quản trị sản phẩm; dữ liệu sản phẩm được nạp bằng seed |
+| FR-16 | Thanh toán thật qua cổng ngân hàng hoặc ví điện tử | Won't | Kiểm chứng phủ định: mọi thanh toán đi qua dịch vụ mô phỏng (`mock-gateway`); không có khóa hay cấu hình cổng thanh toán thật trong repository |
 
 ## 2. Yêu cầu phi chức năng
 
@@ -41,7 +41,7 @@ Phiên bản 1.0. Ưu tiên theo MoSCoW: **Must**, **Should**, **Could**, **Won'
 
 ## 3. Sơ đồ use-case tổng quát
 
-Xem file nguồn `docs/diagrams/usecase-overview.puml` (ảnh kết xuất `usecase-overview.svg`).
+Nguồn: `docs/diagrams/usecase-overview.puml`; ảnh kết xuất: `docs/diagrams/usecase-overview.svg`.
 
 | Mã use-case | Tên | Actor | Yêu cầu liên quan |
 |---|---|---|---|
@@ -51,5 +51,7 @@ Xem file nguồn `docs/diagrams/usecase-overview.puml` (ảnh kết xuất `usec
 | UC-04 | Đặt và thanh toán đơn hàng | Customer, Payment Service | FR-07, FR-08, FR-09, FR-10 |
 | UC-05 | Xem trạng thái và lịch sử đơn | Customer | FR-11, FR-12 |
 | UC-06 | Cập nhật trạng thái đơn | Staff | FR-13 |
+| UC-07 | Áp mã khuyến mãi (extend của UC-04) | Customer | FR-08 |
+| UC-08 | Xác thực người dùng (include trong UC-04, UC-05, UC-06) | Customer, Staff | FR-06, NFR-02 |
 
 Đặc tả chi tiết UC-04 nằm ở `docs/requirements/use-case-checkout.md`.
