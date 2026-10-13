@@ -2,6 +2,8 @@
 
 Sơ đồ: `docs/diagrams/usecase-checkout.puml` (ảnh: `docs/diagrams/usecase-checkout.svg`)
 
+Ghi chú: "Thanh toán bằng Ví" và "Thanh toán bằng Thẻ" là hai dạng cụ thể (generalization) của "Thanh toán đơn", tương ứng `PaymentMethod` WALLET/CARD trong mô hình dữ liệu (xem luồng thay thế A2).
+
 ## 1. Thông tin chung
 
 | Mục | Nội dung |

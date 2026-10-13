@@ -1,27 +1,30 @@
 @startuml usecase-overview
 left to right direction
 skinparam packageStyle rectangle
+skinparam nodesep 30
+skinparam ranksep 70
 
 actor Customer
 actor Staff
 actor "Payment Service" as PS
 
 rectangle "<<Business>>BrewLite" {
+  usecase "Đăng ký tài khoản" as UC03
   usecase "Xem menu và chi tiết sản phẩm" as UC01
   usecase "Quản lý giỏ hàng" as UC02
-  usecase "Đăng ký, đăng nhập" as UC03
   usecase "Đặt và thanh toán đơn hàng" as UC04
   usecase "Xem trạng thái và lịch sử đơn" as UC05
   usecase "Cập nhật trạng thái đơn" as UC06
   usecase "Áp mã khuyến mãi" as UC07
-  usecase "Xác thực người dùng" as UC08
+  usecase "Đăng nhập" as UC08
 }
 
+Customer -- UC03
 Customer -- UC01
 Customer -- UC02
-Customer -- UC03
 Customer -- UC04
 Customer -- UC05
+Customer -- UC08
 Staff -- UC06
 UC04 -- PS
 
