@@ -2,18 +2,20 @@
 top to bottom direction
 skinparam packageStyle rectangle
 skinparam nodesep 40
-skinparam ranksep 50
+skinparam ranksep 60
 
 actor Customer
 actor "Payment Service" as PS
 
 rectangle "<<Business>>BrewLite" {
   usecase "Đặt và thanh toán đơn hàng" as UC04
-  usecase "Xác thực người dùng" as UCA
+  usecase "Đăng nhập" as UCA
   usecase "Tạo đơn hàng" as UCO
   usecase "Thanh toán đơn" as UCP
   usecase "Kiểm tra tồn kho" as UCS
   usecase "Áp mã khuyến mãi" as UCD
+  usecase "Thanh toán bằng Ví" as UCW
+  usecase "Thanh toán bằng Thẻ" as UCC
 }
 
 Customer -right- UC04
@@ -24,5 +26,7 @@ UCA -[hidden]right- UCO
 UCO -[hidden]right- UCP
 UCO .down.> UCS : <<include>>
 UCD .up.> UCO : <<extend>>
+UCW --up-|> UCP
+UCC --up-|> UCP
 UCP -right- PS
 @enduml

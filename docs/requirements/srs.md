@@ -47,11 +47,11 @@ Nguồn: `docs/diagrams/usecase-overview.puml`; ảnh kết xuất: `docs/diagra
 |---|---|---|---|
 | UC-01 | Xem menu và chi tiết sản phẩm | Customer | FR-01, FR-02 |
 | UC-02 | Quản lý giỏ hàng | Customer | FR-03, FR-04 |
-| UC-03 | Đăng ký và đăng nhập | Customer | FR-05, FR-06 |
+| UC-03 | Đăng ký tài khoản | Customer | FR-05 |
 | UC-04 | Đặt và thanh toán đơn hàng | Customer, Payment Service | FR-07, FR-08, FR-09, FR-10 |
 | UC-05 | Xem trạng thái và lịch sử đơn | Customer | FR-11, FR-12 |
 | UC-06 | Cập nhật trạng thái đơn | Staff | FR-13 |
 | UC-07 | Áp mã khuyến mãi (extend của UC-04) | Customer | FR-08 |
-| UC-08 | Xác thực người dùng (include trong UC-04, UC-05, UC-06) | Customer, Staff | FR-06, NFR-02 |
+| UC-08 | Đăng nhập (include trong UC-04, UC-05, UC-06) | Customer, Staff | FR-06, NFR-02 |
 
 Đặc tả chi tiết UC-04 nằm ở `docs/requirements/use-case-checkout.md`.
