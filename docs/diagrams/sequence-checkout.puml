@@ -1,0 +1,104 @@
+@startuml sequence-checkout
+title UC-04 Đặt và thanh toán đơn hàng – Sequence diagram
+autonumber
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 260
+skinparam responseMessageBelowArrow true
+
+actor Customer
+participant "Next.js UI" as UI
+participant "NestJS API" as API
+database "Database\n(PostgreSQL)" as DB
+participant "Payment Service\n(mock gateway)" as PS
+
+== Giai đoạn 1: Tạo đơn hàng ==
+Customer -> UI : Bấm "Đặt đơn" trong giỏ hàng
+UI -> API : POST /orders\n(Bearer JWT, items[])
+activate API
+API -> API : AuthGuard kiểm tra JWT
+alt JWT thiếu, sai hoặc hết hạn
+  API --> UI : 401 Unauthorized
+  UI --> Customer : Chuyển đến trang đăng nhập\n(giữ nguyên giỏ hàng)
+else JWT hợp lệ
+  API -> API : Validate dữ liệu (DTO)\nsize S/M/L, topping hợp lệ, qty 1..20
+  alt dữ liệu không hợp lệ
+    API --> UI : 400 Bad Request
+    UI --> Customer : Hiển thị lỗi nhập liệu
+  else dữ liệu hợp lệ
+    API -> DB : SELECT sản phẩm theo id
+    DB --> API : danh sách sản phẩm
+    API -> API : Tính unitPrice, lineTotal, total\n(tính ở phía server)
+    API -> DB : BEGIN transaction
+    note right of API
+      [Sprint 2] Tạo đơn và trừ tồn kho
+      nằm trong cùng một transaction
+    end note
+    loop mỗi sản phẩm trong đơn
+      API -> DB : UPDATE product SET stock = stock - qty,\nversion = version + 1\nWHERE id = ? AND version = ? AND stock >= qty
+    end
+    alt có sản phẩm không cập nhật được\n(hết hàng hoặc xung đột version)
+      API -> DB : ROLLBACK
+      API --> UI : 409 Conflict (hết hàng)
+      UI --> Customer : Báo món nào đã hết hàng
+    else tất cả cập nhật thành công
+      API -> DB : INSERT Order (PENDING) + OrderItems
+      API -> DB : COMMIT
+      API --> UI : 201 Created {orderId, total}
+      UI --> Customer : Hiển thị tổng tiền,\nchọn Ví hoặc Thẻ
+    end
+  end
+end
+deactivate API
+
+== Giai đoạn 2: Thanh toán (chỉ khi đơn đã được tạo) ==
+Customer -> UI : Xác nhận phương thức thanh toán
+UI -> UI : Sinh idempotencyKey\n(một khóa cho mỗi lần thanh toán)
+UI -> API : POST /payments\n(Bearer JWT, orderId, method, idempotencyKey)
+activate API
+API -> API : AuthGuard kiểm tra JWT, validate dữ liệu
+API -> DB : SELECT Order WHERE id = ? AND userId = ?
+DB --> API : đơn hàng
+alt không có đơn hoặc không thuộc người dùng
+  API --> UI : 404 Not Found
+  UI --> Customer : Báo không tìm thấy đơn
+else trạng thái khác PENDING và PAYMENT_FAILED
+  API --> UI : 409 Conflict
+  UI --> Customer : Báo đơn không thể thanh toán
+else đơn có thể thanh toán
+  API -> DB : SELECT Payment WHERE idempotencyKey = ?
+  note right of API
+    [Sprint 2] Kiểm tra idempotency
+    (code hiện tại chưa đọc khóa này)
+  end note
+  DB --> API : kết quả
+  alt khóa đã tồn tại (client gửi lại yêu cầu)
+    API --> UI : 200 trả lại kết quả của lần đầu\n(không gọi lại Payment Service)
+    UI --> Customer : Hiển thị kết quả,\nkhông tính tiền lần hai
+  else khóa chưa tồn tại
+    API -> PS : charge(amount = order.total, method)
+    alt thanh toán thành công
+      PS --> API : thành công
+      API -> DB : BEGIN transaction
+      API -> DB : INSERT Payment (SUCCESS, idempotencyKey)
+      API -> DB : UPDATE Order SET status = PAID
+      API -> DB : COMMIT
+      API --> UI : 200 {paymentStatus: SUCCESS, orderStatus: PAID}
+      UI --> Customer : Màn hình xác nhận đơn hàng
+    else thanh toán thất bại
+      PS --> API : thất bại
+      API -> DB : BEGIN transaction
+      API -> DB : INSERT Payment (FAILED, idempotencyKey)
+      API -> DB : UPDATE Order SET status = PAYMENT_FAILED
+      API -> DB : COMMIT
+      API --> UI : 200 {paymentStatus: FAILED, orderStatus: PAYMENT_FAILED}
+      UI --> Customer : Báo thất bại, cho phép thử lại\n(với idempotencyKey mới)
+    end
+  end
+end
+deactivate API
+
+legend bottom
+  Ghi chú [Sprint 2] là thiết kế chưa có trong code hiện tại.
+  Các bước còn lại khớp orders.service.ts và payments.service.ts.
+endlegend
+@enduml

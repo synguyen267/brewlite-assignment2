@@ -1,0 +1,64 @@
+@startuml activity-order
+title Activity diagram – Luồng đặt đơn end-to-end của BrewLite
+skinparam defaultFontSize 13
+skinparam ArrowColor #333333
+
+|Khách hàng|
+start
+:Xem menu;
+|Hệ thống BrewLite|
+:Hiển thị danh sách sản phẩm;
+|Khách hàng|
+repeat
+  :Chọn sản phẩm, size, topping, số lượng;
+  :Thêm vào giỏ hàng;
+repeat while (Thêm món khác?) is (có) not (không)
+:Kiểm tra giỏ hàng, bấm "Đặt đơn";
+|Hệ thống BrewLite|
+if (Khách đã đăng nhập (JWT hợp lệ)?) then (chưa)
+  |Khách hàng|
+  :Đăng nhập hoặc đăng ký;
+  |Hệ thống BrewLite|
+  :Xác thực và cấp JWT;
+else (rồi)
+endif
+:Kiểm tra dữ liệu, tính giá và tổng tiền ở server;
+if (Tất cả món còn đủ tồn kho?) then (hết hàng)
+  :Hủy giao dịch, không tạo đơn;
+  |Khách hàng|
+  :Nhận thông báo món hết hàng;
+  stop
+else (đủ hàng)
+endif
+|Hệ thống BrewLite|
+:Trừ tồn kho và tạo đơn (trạng thái PENDING);
+|Khách hàng|
+:Xem tổng tiền, chọn Ví hoặc Thẻ;
+repeat
+  |Hệ thống BrewLite|
+  :Gửi yêu cầu thanh toán\n(kèm idempotencyKey);
+  |Dịch vụ thanh toán|
+  :Xử lý giao dịch;
+  |Hệ thống BrewLite|
+  if (Thanh toán thành công?) then (thành công)
+    :Ghi Payment SUCCESS,\nđổi đơn sang PAID;
+    |Khách hàng|
+    :Nhận xác nhận đơn hàng;
+    |Nhân viên quầy|
+    :Nhận đơn đã thanh toán,\nchuyển sang PREPARING;
+    :Pha chế xong,\nchuyển sang READY;
+    |Khách hàng|
+    :Theo dõi trạng thái đơn,\nnhận đồ uống;
+    |Nhân viên quầy|
+    :Giao đồ uống,\nchuyển sang COMPLETED;
+    stop
+  else (thất bại)
+    :Ghi Payment FAILED,\nđổi đơn sang PAYMENT_FAILED;
+    |Khách hàng|
+    :Nhận thông báo thanh toán thất bại;
+  endif
+repeat while (Khách chọn thử lại?) is (có) not (không)
+|Hệ thống BrewLite|
+:Giữ đơn ở trạng thái PAYMENT_FAILED;
+stop
+@enduml
