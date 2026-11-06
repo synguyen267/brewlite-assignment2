@@ -109,3 +109,7 @@ Quy tắc phụ thuộc: Controller chỉ gọi Service; Service chỉ gọi `Pr
 | PaymentsModule + mock gateway | FR-09, FR-10, FR-16 | `apps/api/src/payments` |
 | PostgreSQL + migration | NFR-09 | `apps/api/prisma` |
 | HealthModule, Docker, CI/CD | NFR-07, NFR-08, NFR-10, NFR-11 | **[Sprint 2]** |
+
+## 11. Sơ đồ triển khai
+
+Deployment diagram cho môi trường production trên Render, kèm ranh giới local, CI, production, giao thức, cổng, secret, health check và log: [`deployment-production.puml`](deployment-production.puml), ghi chú và bảng truy vết ở [`deployment-production.md`](deployment-production.md).
