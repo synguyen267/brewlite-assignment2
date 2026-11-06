@@ -35,7 +35,7 @@ brewlite/
 
 ## Yêu cầu
 
-- Node.js 20.9 trở lên và npm
+- Node.js 24.9 trở lên (LTS 24) và npm; Jest của API cần phiên bản này để chạy test
 - Git
 - Docker Desktop
 
