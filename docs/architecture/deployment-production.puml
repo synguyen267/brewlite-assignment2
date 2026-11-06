@@ -1,0 +1,68 @@
+@startuml deployment-production
+left to right direction
+skinparam shadowing false
+skinparam nodesep 50
+skinparam ranksep 90
+skinparam defaultFontSize 14
+
+title BrewLite – Deployment diagram (local, CI, production trên Render)
+
+rectangle "LOCAL – máy lập trình viên" as local #EAF4FF {
+  node "Docker Compose" as compose {
+    node "web\nNext.js :3000" as lweb
+    node "api\nNestJS :3001" as lapi
+    database "db\nPostgreSQL 16 :5432\n(map 5433 ra host)\nvolume brewlite-data" as ldb
+  }
+  artifact ".env\n(không commit)" as lenv
+}
+
+rectangle "CI – GitHub" as ci #FFF6E5 {
+  node "GitHub repository\nsynguyen267/brewlite-assignment2" as repo
+  node "GitHub Secrets\nRENDER_API_DEPLOY_HOOK\nRENDER_WEB_DEPLOY_HOOK" as ghsecrets
+  node "GitHub Actions runner\nInstall → Lint → Test → Build\n→ Docker build → Push\n→ Deploy → Smoke test" as runner
+  database "GHCR – container registry\nimage tag = commit SHA" as ghcr
+}
+
+cloud "PRODUCTION – Render" as render #EAFBEA {
+  node "Web Service: brewlite-web\nDocker image Next.js\nHTTPS :443 (Render cấp TLS)\nENV: NEXT_PUBLIC_API_URL" as pweb
+  node "Web Service: brewlite-api\nDocker image NestJS\nHTTPS :443 (Render cấp TLS)\nHealth check: GET /health\nPre-deploy: prisma migrate deploy\nENV: DATABASE_URL, JWT_SECRET,\nPORT, CORS_ORIGIN" as papi
+  database "Render Postgres\nPersistent storage\nKhông mở public\n:5432" as pdb
+  node "Render logs\n(stdout của web và api)" as logs
+}
+
+node "Thiết bị người dùng" as device {
+  artifact "Trình duyệt / PWA" as browser
+}
+
+' --- Local ---
+lweb --> lapi : HTTP :3001
+lapi --> ldb : TCP 5432
+lenv ..> lapi : biến môi trường
+
+' --- Local -> CI ---
+local ..> repo : git push / pull request
+
+' --- CI ---
+repo --> runner : push, tag, PR
+ghsecrets ..> runner : secret của CI
+runner --> ghcr : docker push (HTTPS)
+
+' --- CI -> Production ---
+runner ..> render : POST deploy hook (HTTPS)
+runner ..> papi : smoke test\nGET /health, GET /products
+ghcr <.. render : pull image
+
+' --- Production ---
+browser --> pweb : HTTPS, tải giao diện
+browser --> papi : HTTPS, JSON + JWT
+papi --> pdb : TCP 5432\nURL nội bộ (Prisma)
+papi --> logs : stdout
+
+legend bottom
+  |= Ký hiệu |= Ý nghĩa |
+  | Nét liền | Lưu lượng khi hệ thống chạy |
+  | Nét đứt | Việc xảy ra lúc phát triển và deploy |
+  | Vùng xanh dương / vàng / xanh lá | Local / CI / Production |
+endlegend
+
+@enduml
