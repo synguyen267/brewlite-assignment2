@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { ApiError, createOrder } from '@/lib/api';
 import { useAuthStore } from '@/lib/auth-store';
 import {
@@ -22,7 +22,11 @@ export default function CartPage() {
   const token = useAuthStore((s) => s.token);
   const logout = useAuthStore((s) => s.logout);
 
-  const [hydrated, setHydrated] = useState(false);
+  const hydrated = useSyncExternalStore(
+    (onStoreChange) => useCartStore.persist.onFinishHydration(onStoreChange),
+    () => useCartStore.persist.hasHydrated(),
+    () => false,
+  );
   const [placing, setPlacing] = useState(false);
   const [orderError, setOrderError] = useState('');
   const [orderDone, setOrderDone] = useState<{
@@ -30,14 +34,6 @@ export default function CartPage() {
     total: number;
     status: string;
   } | null>(null);
-
-  useEffect(() => {
-    const unsub = useCartStore.persist.onFinishHydration(() =>
-      setHydrated(true),
-    );
-    setHydrated(useCartStore.persist.hasHydrated());
-    return unsub;
-  }, []);
 
   const toppingText = (values: string[]) =>
     values.length === 0
