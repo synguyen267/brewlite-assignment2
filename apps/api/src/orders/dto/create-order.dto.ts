@@ -10,14 +10,14 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { TOPPING_VALUES, type Size } from '../pricing';
+import { SIZE_VALUES, TOPPING_VALUES, type Size } from '../pricing';
 
 export class CreateOrderItemDto {
   @IsInt()
   @Min(1)
   productId!: number;
 
-  @IsIn(['S', 'M', 'L'])
+  @IsIn(SIZE_VALUES)
   size!: Size;
 
   @IsArray()
