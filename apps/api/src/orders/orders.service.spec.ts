@@ -16,7 +16,11 @@ describe('OrdersService', () => {
   };
   const prisma = {
     $transaction: jest.fn(),
-    order: { findUnique: jest.fn() },
+    order: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      updateMany: jest.fn(),
+    },
   };
 
   const coffee = { id: 1, name: 'Cà phê sữa', price: 35000, stock: 10 };
@@ -170,6 +174,89 @@ describe('OrdersService', () => {
 
       await expect(service.findOneForUser(5, 7)).rejects.toThrow(
         NotFoundException,
+      );
+    });
+  });
+
+  describe('findAllForUser', () => {
+    it('lấy đơn của đúng người dùng, mới nhất trước', async () => {
+      prisma.order.findMany.mockResolvedValue([{ id: 2 }, { id: 1 }]);
+
+      const result = await service.findAllForUser(7);
+
+      expect(result).toEqual([{ id: 2 }, { id: 1 }]);
+      expect(prisma.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: 7 },
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+        }) as unknown,
+      );
+    });
+  });
+
+  describe('findActive', () => {
+    it('chỉ lấy đơn đã thanh toán và chưa giao, cũ nhất trước', async () => {
+      prisma.order.findMany.mockResolvedValue([]);
+
+      await service.findActive();
+
+      expect(prisma.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { status: { in: ['PAID', 'PREPARING', 'READY'] } },
+          orderBy: { createdAt: 'asc' },
+        }) as unknown,
+      );
+    });
+  });
+
+  describe('updateStatus', () => {
+    it('chuyển PAID sang PREPARING', async () => {
+      prisma.order.findUnique
+        .mockResolvedValueOnce({ id: 5, status: 'PAID' })
+        .mockResolvedValueOnce({ id: 5, status: 'PREPARING' });
+      prisma.order.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await service.updateStatus(5, 'PREPARING');
+
+      expect(prisma.order.updateMany).toHaveBeenCalledWith({
+        where: { id: 5, status: 'PAID' },
+        data: { status: 'PREPARING' },
+      });
+      expect(result).toEqual({ id: 5, status: 'PREPARING' });
+    });
+
+    it('từ chối chuyển nhảy bước (PAID sang COMPLETED)', async () => {
+      prisma.order.findUnique.mockResolvedValue({ id: 5, status: 'PAID' });
+
+      await expect(service.updateStatus(5, 'COMPLETED')).rejects.toThrow(
+        ConflictException,
+      );
+      expect(prisma.order.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('từ chối khi đơn chưa thanh toán', async () => {
+      prisma.order.findUnique.mockResolvedValue({ id: 5, status: 'PENDING' });
+
+      await expect(service.updateStatus(5, 'PREPARING')).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('ném NotFoundException khi không có đơn', async () => {
+      prisma.order.findUnique.mockResolvedValue(null);
+
+      await expect(service.updateStatus(5, 'PREPARING')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('ném ConflictException khi trạng thái đã bị đổi bởi người khác', async () => {
+      prisma.order.findUnique.mockResolvedValue({ id: 5, status: 'PAID' });
+      prisma.order.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.updateStatus(5, 'PREPARING')).rejects.toThrow(
+        ConflictException,
       );
     });
   });
