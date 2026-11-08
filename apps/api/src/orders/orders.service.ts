@@ -4,9 +4,24 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import type { OrderStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { calcUnitPrice } from './pricing';
+
+// Các trạng thái đơn mà nhân viên được phép chuyển tiếp. Đơn chưa thanh toán
+// (PENDING, PAYMENT_FAILED) và đơn đã kết thúc không chuyển tiếp được.
+export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  PENDING: [],
+  PAYMENT_FAILED: [],
+  PAID: ['PREPARING'],
+  PREPARING: ['READY'],
+  READY: ['COMPLETED'],
+  COMPLETED: [],
+  CANCELLED: [],
+};
+
+const ACTIVE_STATUSES: OrderStatus[] = ['PAID', 'PREPARING', 'READY'];
 
 @Injectable()
 export class OrdersService {
@@ -91,5 +106,58 @@ export class OrdersService {
       throw new NotFoundException('Không tìm thấy đơn hàng');
     }
     return order;
+  }
+
+  /** Lịch sử đơn của khách, mới nhất trước. */
+  async findAllForUser(userId: number) {
+    return this.prisma.order.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      include: {
+        items: {
+          include: { product: { select: { name: true, imageUrl: true } } },
+        },
+      },
+    });
+  }
+
+  /** Hàng đợi của nhân viên: các đơn đã thanh toán và chưa giao, cũ nhất trước. */
+  async findActive() {
+    return this.prisma.order.findMany({
+      where: { status: { in: ACTIVE_STATUSES } },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        user: { select: { email: true } },
+        items: {
+          include: { product: { select: { name: true, imageUrl: true } } },
+        },
+      },
+    });
+  }
+
+  /** Nhân viên chuyển trạng thái đơn theo đúng thứ tự cho phép. */
+  async updateStatus(id: number, next: OrderStatus) {
+    const order = await this.prisma.order.findUnique({ where: { id } });
+    if (!order) {
+      throw new NotFoundException('Không tìm thấy đơn hàng');
+    }
+    if (!ORDER_TRANSITIONS[order.status].includes(next)) {
+      throw new ConflictException(
+        `Không thể chuyển đơn từ ${order.status} sang ${next}`,
+      );
+    }
+
+    // Cập nhật có điều kiện để hai nhân viên bấm cùng lúc không ghi đè nhau.
+    const { count } = await this.prisma.order.updateMany({
+      where: { id, status: order.status },
+      data: { status: next },
+    });
+    if (count === 0) {
+      throw new ConflictException(
+        'Trạng thái đơn vừa được thay đổi, hãy tải lại',
+      );
+    }
+    return this.prisma.order.findUnique({ where: { id } });
   }
 }
