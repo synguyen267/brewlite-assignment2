@@ -29,11 +29,6 @@ export default function CartPage() {
   );
   const [placing, setPlacing] = useState(false);
   const [orderError, setOrderError] = useState('');
-  const [orderDone, setOrderDone] = useState<{
-    id: number;
-    total: number;
-    status: string;
-  } | null>(null);
 
   const toppingText = (values: string[]) =>
     values.length === 0
@@ -60,7 +55,7 @@ export default function CartPage() {
         })),
       );
       clear();
-      setOrderDone(order);
+      router.push(`/orders/${order.id}`);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         logout();
@@ -72,25 +67,6 @@ export default function CartPage() {
       setPlacing(false);
     }
   };
-
-  if (orderDone) {
-    return (
-      <main className="mx-auto max-w-2xl px-4 py-8">
-        <div className="rounded-xl border border-green-200 bg-green-50 p-6 text-center">
-          <p className="text-3xl">✓</p>
-          <h1 className="mt-2 text-xl font-bold">Đặt hàng thành công</h1>
-          <p className="mt-2">Mã đơn: #{orderDone.id}</p>
-          <p>Tổng tiền: {formatPrice(orderDone.total)}</p>
-          <p className="text-sm text-stone-600">
-            Trạng thái: {orderDone.status} (chờ thanh toán)
-          </p>
-          <Link href="/" className="mt-4 inline-block text-amber-700 underline">
-            Về trang chủ
-          </Link>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">

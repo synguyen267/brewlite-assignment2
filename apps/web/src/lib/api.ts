@@ -12,6 +12,52 @@ export type OrderLine = {
   qty: number;
 };
 
+export type OrderStatus =
+  | 'PENDING'
+  | 'PAID'
+  | 'PAYMENT_FAILED'
+  | 'PREPARING'
+  | 'READY'
+  | 'COMPLETED'
+  | 'CANCELLED';
+
+export type OrderItemView = {
+  id: number;
+  productId: number;
+  size: string;
+  toppings: string[];
+  qty: number;
+  unitPrice: number;
+  lineTotal: number;
+  product?: { name: string; imageUrl: string };
+};
+
+export type OrderView = {
+  id: number;
+  status: OrderStatus;
+  total: number;
+  createdAt: string;
+  items: OrderItemView[];
+};
+
+export type PaymentMethod = 'WALLET' | 'CARD';
+
+export type PaymentInput = {
+  orderId: number;
+  method: PaymentMethod;
+  idempotencyKey: string;
+  simulateFailure?: boolean;
+};
+
+export type PaymentResult = {
+  paymentId: number;
+  paymentStatus: 'SUCCESS' | 'FAILED';
+  orderId: number;
+  orderStatus: OrderStatus;
+  amount: number;
+  replayed: boolean;
+};
+
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -30,6 +76,25 @@ async function readError(res: Response, fallback: string) {
   } catch {
     return fallback;
   }
+}
+
+async function authedJson<T>(
+  token: string,
+  path: string,
+  init: RequestInit,
+  fallback: string,
+): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) {
+    throw new ApiError(await readError(res, fallback), res.status);
+  }
+  return res.json() as Promise<T>;
 }
 
 export async function fetchProducts(): Promise<Product[]> {
@@ -76,16 +141,30 @@ export async function createOrder(
   token: string,
   items: OrderLine[],
 ): Promise<{ id: number; status: string; total: number }> {
-  const res = await fetch(`${API_URL}/orders`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ items }),
-  });
-  if (!res.ok) {
-    throw new ApiError(await readError(res, 'Không tạo được đơn'), res.status);
-  }
-  return res.json();
+  return authedJson(
+    token,
+    '/orders',
+    { method: 'POST', body: JSON.stringify({ items }) },
+    'Không tạo được đơn',
+  );
+}
+
+export function fetchOrders(token: string): Promise<OrderView[]> {
+  return authedJson(token, '/orders', {}, 'Không tải được lịch sử đơn');
+}
+
+export function fetchOrder(token: string, id: number): Promise<OrderView> {
+  return authedJson(token, `/orders/${id}`, {}, 'Không tải được đơn hàng');
+}
+
+export function payOrder(
+  token: string,
+  input: PaymentInput,
+): Promise<PaymentResult> {
+  return authedJson(
+    token,
+    '/payments',
+    { method: 'POST', body: JSON.stringify(input) },
+    'Thanh toán không thành công',
+  );
 }
