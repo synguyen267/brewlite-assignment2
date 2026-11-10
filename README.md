@@ -86,7 +86,17 @@ npm run dev
 
 Mở http://localhost:3000 để xem menu.
 
-> **[Sprint 2]** Chạy toàn bộ hệ thống (web, api, db) bằng một lệnh `docker compose up` và endpoint `GET /health` sẽ được bổ sung.
+Kiểm tra sức khỏe dịch vụ: `GET http://localhost:3001/health` trả `{"status":"ok","db":"up",...}`; trả 503 khi database lỗi.
+
+### Chạy toàn bộ bằng Docker
+
+```
+docker compose --profile app up --build
+```
+
+Lệnh này build và chạy cả ba dịch vụ: database (cổng 5433), API (http://localhost:3001) và web (http://localhost:3000). API tự áp dụng migration và nạp dữ liệu mẫu khi bảng sản phẩm còn trống. Dừng và xóa container: `docker compose --profile app down` (thêm `-v` để xóa luôn dữ liệu database).
+
+Biến môi trường của API khi chạy bằng Docker: `JWT_SECRET`, `STAFF_EMAILS`, `CORS_ORIGIN`, `RUN_SEED`. Biến `NEXT_PUBLIC_*` của web được ghi cứng lúc build nên truyền qua `build.args` (xem `docker-compose.yml`).
 
 ## Kiểm thử, lint, build
 

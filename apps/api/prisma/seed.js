@@ -17,6 +17,13 @@ const products = [
 ];
 
 async function main() {
+  // Không ghi đè khi đã có dữ liệu (tránh xóa menu và lỗi khóa ngoại khi đã có
+  // đơn hàng). Đặt SEED_RESET=true để xóa và nạp lại từ đầu.
+  const existing = await prisma.product.count();
+  if (existing > 0 && process.env.SEED_RESET !== 'true') {
+    console.log(`Bỏ qua seed: đã có ${existing} sản phẩm`);
+    return;
+  }
   await prisma.product.deleteMany();
   await prisma.product.createMany({ data: products });
   console.log(`Seed xong: ${products.length} sản phẩm`);

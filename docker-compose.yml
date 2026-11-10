@@ -1,7 +1,10 @@
+# Chá»‰ database:            docker compose up -d
+# Cáº£ web, api vÃ  database: docker compose --profile app up --build
+name: brewlite-assignment2
+
 services:
   db:
     image: postgres:16
-    container_name: brewlite-db
     environment:
       POSTGRES_USER: brewlite
       POSTGRES_PASSWORD: brewlite
@@ -10,6 +13,40 @@ services:
       - "5433:5432"
     volumes:
       - brewlite-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U brewlite -d brewlite"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    profiles: ["app"]
+    build:
+      context: ./apps/api
+    environment:
+      PORT: "3001"
+      DATABASE_URL: postgresql://brewlite:brewlite@db:5432/brewlite
+      JWT_SECRET: ${JWT_SECRET:-chi-dung-cho-local-hay-doi-di}
+      CORS_ORIGIN: http://localhost:3000
+      STAFF_EMAILS: ${STAFF_EMAILS:-nhanvien@brewlite.vn}
+      RUN_SEED: "true"
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    profiles: ["app"]
+    build:
+      context: ./apps/web
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3001
+        NEXT_PUBLIC_DEMO_MODE: "true"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
 
 volumes:
   brewlite-data:
