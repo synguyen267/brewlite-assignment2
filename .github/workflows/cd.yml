@@ -1,0 +1,180 @@
+name: CD
+
+# Push vào main hoặc đẩy tag v* -> kiểm tra chất lượng -> build image -> đẩy lên
+# GitHub Container Registry -> triển khai lên Render -> smoke test.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # 1. Cổng chất lượng: lint, test, build (dùng lại workflow CI)
+  quality:
+    name: Quality gate
+    uses: ./.github/workflows/ci.yml
+
+  # 2. Build image gắn tag theo commit SHA (và theo phiên bản khi đẩy tag) rồi push lên registry
+  images:
+    name: Build and push images
+    needs: quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      owner: ${{ steps.vars.outputs.owner }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - id: vars
+        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tags cho image API
+        id: meta-api
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ steps.vars.outputs.owner }}/brewlite-api
+          tags: |
+            type=sha,format=long,prefix=
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build và push image API
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/api
+          push: true
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Tags cho image Web
+        id: meta-web
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ steps.vars.outputs.owner }}/brewlite-web
+          tags: |
+            type=sha,format=long,prefix=
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build và push image Web
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/web
+          push: true
+          tags: ${{ steps.meta-web.outputs.tags }}
+          labels: ${{ steps.meta-web.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.API_PUBLIC_URL || 'http://localhost:3001' }}
+            NEXT_PUBLIC_DEMO_MODE=${{ vars.DEMO_MODE || 'false' }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+  # 3. Triển khai lên Render, smoke test, tự rollback nếu lỗi
+  deploy:
+    name: Deploy to Render
+    needs: images
+    if: vars.DEPLOY_ENABLED == 'true' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+    env:
+      API_IMAGE: ghcr.io/${{ needs.images.outputs.owner }}/brewlite-api
+      WEB_IMAGE: ghcr.io/${{ needs.images.outputs.owner }}/brewlite-web
+      API_URL: ${{ vars.API_PUBLIC_URL }}
+      WEB_URL: ${{ vars.WEB_PUBLIC_URL }}
+    steps:
+      - name: Triển khai API (migration chạy khi container khởi động)
+        env:
+          HOOK: ${{ secrets.RENDER_API_DEPLOY_HOOK }}
+        run: |
+          img="${API_IMAGE}:${GITHUB_SHA}"
+          curl -fsS -X POST "${HOOK}&imgURL=$(jq -rn --arg v "$img" '$v|@uri')" > /dev/null
+          echo "Đã yêu cầu Render triển khai ${img}"
+
+      - name: Smoke test API (health, database, đúng phiên bản)
+        run: |
+          for i in $(seq 1 60); do
+            body=$(curl -fsS --max-time 15 "${API_URL}/health" || true)
+            if echo "$body" | jq -e --arg v "$GITHUB_SHA" '.status=="ok" and .db=="up" and .version==$v' > /dev/null 2>&1; then
+              echo "API đạt health check, đúng phiên bản ${GITHUB_SHA}"
+              break
+            fi
+            if [ "$i" -eq 60 ]; then echo "API không đạt health check đúng phiên bản sau 10 phút"; exit 1; fi
+            echo "Chờ API ($i/60)..."; sleep 10
+          done
+          curl -fsS --max-time 30 "${API_URL}/products" | jq -e 'type=="array" and length>0' > /dev/null
+          echo "GET /products trả danh sách sản phẩm"
+
+      - name: Triển khai Web
+        env:
+          HOOK: ${{ secrets.RENDER_WEB_DEPLOY_HOOK }}
+        run: |
+          img="${WEB_IMAGE}:${GITHUB_SHA}"
+          curl -fsS -X POST "${HOOK}&imgURL=$(jq -rn --arg v "$img" '$v|@uri')" > /dev/null
+          echo "Đã yêu cầu Render triển khai ${img}"
+
+      - name: Smoke test Web
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS --max-time 20 "${WEB_URL}" | grep -q "BrewLite"; then
+              echo "Web trả trang BrewLite"
+              exit 0
+            fi
+            echo "Chờ Web ($i/60)..."; sleep 10
+          done
+          echo "Web không phản hồi đúng sau 10 phút"; exit 1
+
+      # Chỉ khi smoke test đạt mới đánh dấu bản này là "stable" (điểm rollback).
+      - uses: docker/setup-buildx-action@v3
+        if: success()
+
+      - uses: docker/login-action@v3
+        if: success()
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Đánh dấu bản ổn định
+        if: success()
+        run: |
+          docker buildx imagetools create -t "${API_IMAGE}:stable" "${API_IMAGE}:${GITHUB_SHA}"
+          docker buildx imagetools create -t "${WEB_IMAGE}:stable" "${WEB_IMAGE}:${GITHUB_SHA}"
+
+      # Smoke test lỗi: đưa cả hai dịch vụ về bản "stable" trước đó rồi báo pipeline thất bại.
+      - name: Rollback về bản ổn định gần nhất
+        if: failure()
+        env:
+          API_HOOK: ${{ secrets.RENDER_API_DEPLOY_HOOK }}
+          WEB_HOOK: ${{ secrets.RENDER_WEB_DEPLOY_HOOK }}
+        run: |
+          echo "Triển khai thất bại, đang rollback về :stable"
+          api_img="${API_IMAGE}:stable"
+          web_img="${WEB_IMAGE}:stable"
+          curl -fsS -X POST "${API_HOOK}&imgURL=$(jq -rn --arg v "$api_img" '$v|@uri')" > /dev/null \
+            || echo "Không rollback được API (có thể chưa có bản stable nào)"
+          curl -fsS -X POST "${WEB_HOOK}&imgURL=$(jq -rn --arg v "$web_img" '$v|@uri')" > /dev/null \
+            || echo "Không rollback được Web (có thể chưa có bản stable nào)"

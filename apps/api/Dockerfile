@@ -23,6 +23,11 @@ FROM node:24-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 
+# Phiên bản (commit SHA) được ghi vào image để /health báo lại, giúp pipeline
+# kiểm tra đúng bản mới đã chạy.
+ARG GIT_SHA=dev
+ENV GIT_SHA=$GIT_SHA
+
 RUN apt-get update \
   && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*

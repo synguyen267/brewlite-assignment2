@@ -1,10 +1,11 @@
 name: CI
 
+# Chạy khi mở pull request, và được pipeline CD gọi lại làm cổng chất lượng
+# (workflow_call) trước khi build image.
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
+  workflow_call:
 
 concurrency:
   group: ci-${{ github.ref }}

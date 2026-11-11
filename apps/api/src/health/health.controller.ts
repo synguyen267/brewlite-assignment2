@@ -16,6 +16,7 @@ export class HealthController {
     return {
       status: 'ok',
       db: 'up',
+      version: process.env.GIT_SHA ?? 'dev',
       uptime: Math.round(process.uptime()),
     };
   }
