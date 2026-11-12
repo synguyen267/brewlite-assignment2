@@ -29,6 +29,7 @@ describe('HealthController', () => {
     expect(result.status).toBe('ok');
     expect(result.db).toBe('up');
     expect(typeof result.uptime).toBe('number');
+    expect(typeof result.version).toBe('string');
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
   });
 
