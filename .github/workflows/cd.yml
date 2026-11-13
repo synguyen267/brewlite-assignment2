@@ -54,7 +54,6 @@ jobs:
             type=sha,format=long,prefix=
             type=semver,pattern={{version}}
             type=raw,value=latest,enable={{is_default_branch}}
-
       - name: Build và push image API
         uses: docker/build-push-action@v6
         with:
@@ -76,7 +75,6 @@ jobs:
             type=sha,format=long,prefix=
             type=semver,pattern={{version}}
             type=raw,value=latest,enable={{is_default_branch}}
-
       - name: Build và push image Web
         uses: docker/build-push-action@v6
         with:
@@ -113,7 +111,6 @@ jobs:
           img="${API_IMAGE}:${GITHUB_SHA}"
           curl -fsS -X POST "${HOOK}&imgURL=$(jq -rn --arg v "$img" '$v|@uri')" > /dev/null
           echo "Đã yêu cầu Render triển khai ${img}"
-
       - name: Smoke test API (health, database, đúng phiên bản)
         run: |
           for i in $(seq 1 60); do
@@ -127,7 +124,6 @@ jobs:
           done
           curl -fsS --max-time 30 "${API_URL}/products" | jq -e 'type=="array" and length>0' > /dev/null
           echo "GET /products trả danh sách sản phẩm"
-
       - name: Triển khai Web
         env:
           HOOK: ${{ secrets.RENDER_WEB_DEPLOY_HOOK }}
@@ -135,20 +131,23 @@ jobs:
           img="${WEB_IMAGE}:${GITHUB_SHA}"
           curl -fsS -X POST "${HOOK}&imgURL=$(jq -rn --arg v "$img" '$v|@uri')" > /dev/null
           echo "Đã yêu cầu Render triển khai ${img}"
-
       - name: Smoke test Web
         run: |
-          # Ghi ra tệp rồi mới kiểm tra, tránh lỗi ống dẫn (pipe) khi grep thoát sớm.
+          echo "WEB_URL=[${WEB_URL}]"
           for i in $(seq 1 60); do
-            code=$(curl -s -o web.html -w '%{http_code}' --max-time 20 "${WEB_URL}" || true)
+            code=$(curl -sL -D headers.txt -o web.html -w '%{http_code}' --max-time 20 "${WEB_URL}" || true)
             if [ "$code" = "200" ] && grep -q "BrewLite" web.html; then
               echo "Web trả trang BrewLite (HTTP ${code})"
               exit 0
             fi
-            echo "Chờ Web ($i/60), HTTP ${code:-không phản hồi}..."; sleep 10
+            echo "Chờ Web ($i/60), HTTP ${code:-không phản hồi}..."
+            if [ "$i" -eq 1 ] || [ "$i" -eq 30 ]; then
+              echo "--- headers ---"; head -n 20 headers.txt
+              echo "--- body ---"; head -c 300 web.html; echo
+            fi
+            sleep 10
           done
           echo "Web không phản hồi đúng sau 10 phút"; exit 1
-
       # Chỉ khi smoke test đạt mới đánh dấu bản này là "stable" (điểm rollback).
       - uses: docker/setup-buildx-action@v3
         if: success()
@@ -165,7 +164,6 @@ jobs:
         run: |
           docker buildx imagetools create -t "${API_IMAGE}:stable" "${API_IMAGE}:${GITHUB_SHA}"
           docker buildx imagetools create -t "${WEB_IMAGE}:stable" "${WEB_IMAGE}:${GITHUB_SHA}"
-
       # Smoke test lỗi: đưa cả hai dịch vụ về bản "stable" trước đó (nếu đã có) rồi báo pipeline thất bại.
       - name: Rollback về bản ổn định gần nhất
         if: failure()
