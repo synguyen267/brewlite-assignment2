@@ -138,12 +138,14 @@ jobs:
 
       - name: Smoke test Web
         run: |
+          # Ghi ra tệp rồi mới kiểm tra, tránh lỗi ống dẫn (pipe) khi grep thoát sớm.
           for i in $(seq 1 60); do
-            if curl -fsS --max-time 20 "${WEB_URL}" | grep -q "BrewLite"; then
-              echo "Web trả trang BrewLite"
+            code=$(curl -s -o web.html -w '%{http_code}' --max-time 20 "${WEB_URL}" || true)
+            if [ "$code" = "200" ] && grep -q "BrewLite" web.html; then
+              echo "Web trả trang BrewLite (HTTP ${code})"
               exit 0
             fi
-            echo "Chờ Web ($i/60)..."; sleep 10
+            echo "Chờ Web ($i/60), HTTP ${code:-không phản hồi}..."; sleep 10
           done
           echo "Web không phản hồi đúng sau 10 phút"; exit 1
 
@@ -164,17 +166,25 @@ jobs:
           docker buildx imagetools create -t "${API_IMAGE}:stable" "${API_IMAGE}:${GITHUB_SHA}"
           docker buildx imagetools create -t "${WEB_IMAGE}:stable" "${WEB_IMAGE}:${GITHUB_SHA}"
 
-      # Smoke test lỗi: đưa cả hai dịch vụ về bản "stable" trước đó rồi báo pipeline thất bại.
+      # Smoke test lỗi: đưa cả hai dịch vụ về bản "stable" trước đó (nếu đã có) rồi báo pipeline thất bại.
       - name: Rollback về bản ổn định gần nhất
         if: failure()
         env:
           API_HOOK: ${{ secrets.RENDER_API_DEPLOY_HOOK }}
           WEB_HOOK: ${{ secrets.RENDER_WEB_DEPLOY_HOOK }}
         run: |
-          echo "Triển khai thất bại, đang rollback về :stable"
-          api_img="${API_IMAGE}:stable"
-          web_img="${WEB_IMAGE}:stable"
-          curl -fsS -X POST "${API_HOOK}&imgURL=$(jq -rn --arg v "$api_img" '$v|@uri')" > /dev/null \
-            || echo "Không rollback được API (có thể chưa có bản stable nào)"
-          curl -fsS -X POST "${WEB_HOOK}&imgURL=$(jq -rn --arg v "$web_img" '$v|@uri')" > /dev/null \
-            || echo "Không rollback được Web (có thể chưa có bản stable nào)"
+          echo "Triển khai thất bại, kiểm tra bản stable để rollback"
+          rollback() {
+            name="$1"; image="$2"; hook="$3"
+            if docker buildx imagetools inspect "${image}:stable" > /dev/null 2>&1; then
+              if curl -fsS -X POST "${hook}&imgURL=$(jq -rn --arg v "${image}:stable" '$v|@uri')" > /dev/null; then
+                echo "Đã yêu cầu rollback ${name} về ${image}:stable"
+              else
+                echo "Không gọi được deploy hook để rollback ${name}"
+              fi
+            else
+              echo "Chưa có bản stable của ${name}, bỏ qua rollback"
+            fi
+          }
+          rollback api "$API_IMAGE" "$API_HOOK"
+          rollback web "$WEB_IMAGE" "$WEB_HOOK"
