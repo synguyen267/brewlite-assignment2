@@ -106,7 +106,7 @@ Chạy trong từng thư mục `apps/api` và `apps/web`:
 |---|---|
 | Lint | `npm run lint` |
 | Unit test (API) | `npm test` |
-| E2E test (API) | `npm run test:e2e` |
+| Integration và E2E test (API, cần database đang chạy và đã migrate) | `npm run test:e2e` |
 | Build | `npm run build` |
 
 CI chạy chuỗi Install → Lint → Test → Build cho mỗi pull request. Pull request không được merge khi một bước thất bại.
