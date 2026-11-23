@@ -18,7 +18,7 @@ Sơ đồ: `docs/diagrams/activity-order.puml` (ảnh: `docs/diagrams/activity-o
 
 - Từ "Kiểm tra dữ liệu" đến "Ghi Payment" trùng với `sequence-checkout`.
 - Các trạng thái PENDING, PAID, PAYMENT_FAILED, PREPARING, READY, COMPLETED trùng với `OrderStatus` trong `class-domain`.
-- Việc nhân viên đổi PREPARING, READY, COMPLETED ứng với FR-13, hiện là thiết kế Sprint 2 (code chưa có vai trò nhân viên và API đổi trạng thái).
+- Việc nhân viên đổi PREPARING, READY, COMPLETED ứng với FR-13, đã có API (`GET /staff/orders`, `PATCH /staff/orders/:id/status`), chưa có giao diện nhân viên.
 - Trạng thái CANCELLED chưa vẽ vì nằm ngoài luồng chính.
 
 ## Truy vết

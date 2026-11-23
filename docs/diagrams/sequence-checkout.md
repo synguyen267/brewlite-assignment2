@@ -23,9 +23,9 @@ Lifeline: Customer, Next.js UI, NestJS API, Database (PostgreSQL), Payment Servi
 | 3, 24 Kiểm tra JWT | Đã có | `AuthGuard` đặt ở cấp controller |
 | 6 Validate DTO | Đã có | `CreateOrderDto`: size S/M/L, topping hợp lệ, `qty` 1 đến 20, 1 đến 50 dòng |
 | 9 đến 11 Lấy sản phẩm và tính giá ở server | Đã có | `calcUnitPrice` trong `pricing.ts` |
-| 12 đến 18 Transaction trừ tồn kho | **Thiết kế Sprint 2** | `orders.service.ts` hiện chỉ gọi `order.create`, chưa trừ `stock` |
+| 12 đến 18 Transaction trừ tồn kho | Đã có | `orders.service.ts`: trừ `stock` bằng cập nhật có điều kiện `stock >= qty` trong cùng `$transaction` với việc ghi đơn; hết hàng trả 409 |
 | 25 đến 30 Kiểm tra đơn và trạng thái | Đã có | `payments.service.ts`: 404 nếu sai chủ, 409 nếu sai trạng thái |
-| 31 đến 34 Idempotency | **Thiết kế Sprint 2** | Cột `idempotencyKey` đã có trong schema nhưng service chưa đọc |
+| 31 đến 34 Idempotency | Đã có | `payments.service.ts` đọc `idempotencyKey`; gửi lại cùng khóa trả kết quả lần đầu (`replayed: true`), không gọi lại cổng |
 | 35 đến 49 Gọi cổng thanh toán, ghi `Payment`, đổi trạng thái đơn | Đã có | Hai thao tác ghi nằm trong một `$transaction` |
 
 ## Truy vết
