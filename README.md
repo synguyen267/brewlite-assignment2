@@ -19,13 +19,16 @@ Luồng nghiệp vụ: Xem menu → Chọn tùy chọn → Giỏ hàng → Đặ
 brewlite/
 ├── apps/
 │   ├── web/                # Next.js, cổng 3000
-│   └── api/                # NestJS, cổng 3001 (prisma/ chứa schema, migration, seed)
+│   └── api/                # NestJS, cổng 3001 (prisma/: schema, migration, seed; test/: integration và e2e)
 ├── docs/
 │   ├── requirements/       # Task 1: bối cảnh, SRS, use-case
 │   ├── diagrams/           # Task 2: activity, sequence, class
 │   ├── architecture/       # Task 3: kiến trúc, ADR, deployment diagram
+│   ├── traceability-matrix.md  # Ma trận truy vết
+│   ├── deployment.md       # Triển khai, rollback
+│   ├── release-notes-v1.0.0.md
+│   ├── demo-video.md       # Kịch bản video demo
 │   └── backlog.md          # Product Backlog Sprint 1, Sprint 2
-├── tests/                  # Integration/E2E (bổ sung ở Sprint 2)
 ├── .github/                # Mẫu pull request, workflow CI/CD
 ├── docker-compose.yml
 ├── .env.example
@@ -45,7 +48,7 @@ brewlite/
 
 `.env.example` ở thư mục gốc liệt kê toàn bộ biến. Tạo hai tệp từ nó (không commit):
 
-- `apps/api/.env`: các biến của backend (`PORT`, `DATABASE_URL`, `JWT_SECRET`)
+- `apps/api/.env`: các biến của backend (`PORT`, `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `STAFF_EMAILS`)
 - `apps/web/.env.local`: biến của frontend (`NEXT_PUBLIC_API_URL`)
 
 Đổi `JWT_SECRET` thành một chuỗi bí mật của riêng bạn.
@@ -121,4 +124,23 @@ CI chạy chuỗi Install → Lint → Test → Build cho mỗi pull request. Pu
 
 ## Triển khai và rollback
 
-**[Sprint 2]** Hướng dẫn triển khai lên Render và rollback sẽ nằm ở `docs/deployment.md`.
+Production chạy trên Render (Web Service chạy image Docker lấy từ GitHub Container Registry), database là Render PostgreSQL, không mở public.
+
+| Thành phần | Địa chỉ |
+|---|---|
+| Frontend | https://brewlite-web-latest.onrender.com |
+| API | https://brewlite-api-latest.onrender.com |
+| Health check | https://brewlite-api-latest.onrender.com/health |
+
+Gói miễn phí của Render tắt dịch vụ sau 15 phút không truy cập, lần truy cập đầu có thể mất khoảng 50 giây.
+
+### Triển khai (CD)
+
+Pipeline `.github/workflows` chạy khi push hoặc gắn tag: Lint và Test → Build → Build Docker image (tag theo commit SHA) → Push lên GHCR → Deploy (gọi deploy hook của Render, migration chạy ở bước pre-deploy) → Smoke test (`GET /health`, `GET /products`). Secret (deploy hook) nằm trong GitHub Secrets, không có trong repository hay log.
+
+### Rollback
+
+- Tự động: nếu deploy hoặc smoke test lỗi, pipeline dừng và gọi lại deploy hook với image tag `stable` (bản đã qua smoke test gần nhất).
+- Thủ công: gọi deploy hook với `imgURL` trỏ tới tag SHA của một commit trước đó, hoặc dùng chức năng Rollback trong bảng điều khiển Render.
+
+Chi tiết từng bước: `docs/deployment.md`. Ghi chú phát hành: `docs/release-notes-v1.0.0.md`.
