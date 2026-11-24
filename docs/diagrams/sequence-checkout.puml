@@ -30,7 +30,7 @@ else JWT hợp lệ
     API -> API : Tính unitPrice, lineTotal, total\n(tính ở phía server)
     API -> DB : BEGIN transaction
     note right of API
-      [Sprint 2] Tạo đơn và trừ tồn kho
+      Tạo đơn và trừ tồn kho
       nằm trong cùng một transaction
     end note
     loop mỗi sản phẩm trong đơn
@@ -67,8 +67,8 @@ else trạng thái khác PENDING và PAYMENT_FAILED
 else đơn có thể thanh toán
   API -> DB : SELECT Payment WHERE idempotencyKey = ?
   note right of API
-    [Sprint 2] Kiểm tra idempotency
-    (code hiện tại chưa đọc khóa này)
+    Kiểm tra idempotency: khóa đã có thì
+    trả kết quả cũ, không gọi cổng thanh toán
   end note
   DB --> API : kết quả
   alt khóa đã tồn tại (client gửi lại yêu cầu)
@@ -98,7 +98,6 @@ end
 deactivate API
 
 legend bottom
-  Ghi chú [Sprint 2] là thiết kế chưa có trong code hiện tại.
-  Các bước còn lại khớp orders.service.ts và payments.service.ts.
+  Sơ đồ khớp orders.service.ts và payments.service.ts.
 endlegend
 @enduml
