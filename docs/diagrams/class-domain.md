@@ -7,7 +7,7 @@ Sơ đồ: `docs/diagrams/class-domain.puml` (ảnh: `docs/diagrams/class-domain
 | Lớp | Nguồn | Ghi chú |
 |---|---|---|
 | User | Có trong schema | Vai trò nhân viên không lưu trong bảng: xác định bằng biến môi trường `STAFF_EMAILS` và `StaffGuard` (ADR-007). `loyaltyPoints` đã có |
-| Product | Có trong schema | `stock` và `version` dùng để kiểm soát tồn kho (NFR-06) |
+| Product | Có trong schema | `stock` kiểm soát tồn kho bằng cập nhật có điều kiện `stock >= qty` (NFR-06); cột `version` có trong schema nhưng code chưa dùng |
 | Order | Có trong schema | `promoCode` và `discount` đã có cột; `userId` trong schema đang tùy chọn, thiết kế yêu cầu bắt buộc (SRS FR-07) |
 | OrderItem | Có trong schema | `size` lưu `String` trong schema, giá trị hợp lệ S/M/L kiểm tra bằng DTO; sơ đồ biểu diễn bằng enum `Size` |
 | Payment | Có trong schema | `idempotencyKey` duy nhất, đảm bảo FR-10 |

@@ -1,5 +1,5 @@
-# Chá»‰ database:            docker compose up -d
-# Cáº£ web, api vÃ  database: docker compose --profile app up --build
+# Chỉ database:            docker compose up -d
+# Cả web, api và database: docker compose --profile app up --build
 name: brewlite-assignment2
 
 services:

@@ -34,9 +34,9 @@ else JWT hợp lệ
       nằm trong cùng một transaction
     end note
     loop mỗi sản phẩm trong đơn
-      API -> DB : UPDATE product SET stock = stock - qty,\nversion = version + 1\nWHERE id = ? AND version = ? AND stock >= qty
+      API -> DB : UPDATE product SET stock = stock - qty\nWHERE id = ? AND stock >= qty
     end
-    alt có sản phẩm không cập nhật được\n(hết hàng hoặc xung đột version)
+    alt có sản phẩm không cập nhật được\n(không đủ hàng)
       API -> DB : ROLLBACK
       API --> UI : 409 Conflict (hết hàng)
       UI --> Customer : Báo món nào đã hết hàng
