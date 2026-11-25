@@ -5,6 +5,10 @@ name: CD
 on:
   push:
     branches: [main]
+    # Chỉ đổi tài liệu thì không build và deploy lại. Đẩy tag v* luôn chạy đủ.
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
     tags: ['v*']
   workflow_dispatch:
 
@@ -135,6 +139,7 @@ jobs:
         run: |
           echo "WEB_URL=[${WEB_URL}]"
           for i in $(seq 1 60); do
+            rm -f headers.txt web.html
             code=$(curl -sL -D headers.txt -o web.html -w '%{http_code}' --max-time 20 "${WEB_URL}" || true)
             if [ "$code" = "200" ] && grep -q "BrewLite" web.html; then
               echo "Web trả trang BrewLite (HTTP ${code})"
@@ -142,8 +147,8 @@ jobs:
             fi
             echo "Chờ Web ($i/60), HTTP ${code:-không phản hồi}..."
             if [ "$i" -eq 1 ] || [ "$i" -eq 30 ]; then
-              echo "--- headers ---"; head -n 20 headers.txt
-              echo "--- body ---"; head -c 300 web.html; echo
+              echo "--- headers ---"; head -n 20 headers.txt 2>/dev/null || true
+              echo "--- body ---"; head -c 300 web.html 2>/dev/null || true; echo
             fi
             sleep 10
           done
