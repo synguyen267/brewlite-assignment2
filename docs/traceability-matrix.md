@@ -30,7 +30,7 @@ Liên kết từng yêu cầu trong `docs/requirements/srs.md` với use-case, t
 | FR-10 | Must | UC-04 | Sequence-01 (idempotency), ADR-005 | `API/payments/payments.service.ts`; `WEB/app/orders/[id]/page.tsx` (giữ khóa khi lỗi mạng) | `payments.service.spec` (gửi lại, trùng khóa đồng thời, khóa người khác); `orders-payments.e2e-spec` (gửi lại không tính tiền hai lần); `concurrency.e2e-spec` (hai yêu cầu cùng khóa gửi đồng thời chỉ ghi một giao dịch); `order-page.test` (lỗi mạng dùng cùng khóa); `api.test` (payOrder) |
 | FR-11 | Must | UC-05 | Sequence-01 | `GET /orders/:id`; `WEB/app/orders/[id]/page.tsx` | `orders.service.spec` (đúng chủ, người khác, không có đơn); `orders-payments.e2e-spec` (xác nhận đơn, 404 với người khác); `order-page.test` (chi tiết, tiến trình) |
 | FR-12 | Should | UC-05 | – | `GET /orders`; `WEB/app/orders/page.tsx` | `orders.service.spec` (lịch sử); `orders-payments.e2e-spec` (lịch sử chứa đơn) |
-| FR-13 | Should | UC-06 | ADR-007 | `GET /staff/orders`, `PATCH /staff/orders/:id/status`; `API/auth/staff.guard.ts` | `orders.service.spec` (chuyển trạng thái, từ chối nhảy bước); `staff.guard.spec`; `orders-payments.e2e-spec` (luồng nhân viên, 403 với khách) |
+| FR-13 | Should | UC-06 | ADR-007 | `GET /staff/orders`, `PATCH /staff/orders/:id/status`; `API/auth/staff.guard.ts`; `WEB/app/staff/page.tsx` | `orders.service.spec` (chuyển trạng thái, từ chối nhảy bước); `staff.guard.spec`; `orders-payments.e2e-spec` (luồng nhân viên, 403 với khách); `staff-page.test` (hàng đợi ba cột, nút chuyển trạng thái, 401, 403, 409); `api.test` (fetchStaffOrders, updateOrderStatus) |
 | FR-14 | Could | – | Class-01 (LoyaltyTransaction) | Chưa hiện thực | Không có |
 | FR-15 | Won't | – | – | Không có API hay giao diện quản trị; dữ liệu nạp bằng `apps/api/prisma/seed.js` | Kiểm chứng phủ định: rà soát mã nguồn |
 | FR-16 | Won't | – | ADR-005 | `API/payments/mock-gateway.service.ts` là cổng mô phỏng; không có khóa cổng thật trong repository | Kiểm chứng phủ định: rà soát mã nguồn |
@@ -67,6 +67,5 @@ Các điểm chưa có minh chứng tự động hoặc chưa hiện thực, ghi
 - **FR-08, FR-14:** chưa hiện thực (mức Should và Could).
 - **NFR-01:** chưa đo hiệu năng.
 - **NFR-05:** chưa kiểm thử giao diện ở chiều rộng 360 px.
-- **FR-13:** mới có API cho nhân viên, chưa có giao diện nhân viên.
 - **NFR-10:** test E2E chạy ở mức API với database thật (`supertest`), chưa có test qua trình duyệt.
 - **Cột `version` của `Product`:** có trong schema nhưng code không dùng; tồn kho được bảo vệ bằng cập nhật có điều kiện `stock >= qty`.

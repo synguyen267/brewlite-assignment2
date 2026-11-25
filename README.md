@@ -101,6 +101,10 @@ Lệnh này build và chạy cả ba dịch vụ: database (cổng 5433), API (h
 
 Biến môi trường của API khi chạy bằng Docker: `JWT_SECRET`, `STAFF_EMAILS`, `CORS_ORIGIN`, `RUN_SEED`. Biến `NEXT_PUBLIC_*` của web được ghi cứng lúc build nên truyền qua `build.args` (xem `docker-compose.yml`).
 
+### Trang nhân viên
+
+Nhân viên mở `/staff` (ví dụ http://localhost:3000/staff) để xem hàng đợi các đơn đã thanh toán và chuyển trạng thái: Bắt đầu pha chế, Đã pha xong, Đã giao khách. Tài khoản nhân viên là tài khoản thường (đăng ký ở `/register`) có email nằm trong biến `STAFF_EMAILS` của API (ngăn cách bằng dấu phẩy). Khi chạy bằng Docker, mặc định là `nhanvien@brewlite.vn`.
+
 ## Kiểm thử, lint, build
 
 Chạy trong từng thư mục `apps/api` và `apps/web`:

@@ -15,7 +15,7 @@ Bản bàn giao Assignment 2 – Công nghệ Phần mềm (Trường Đại h�
 - Tạo đơn: giá tính ở server, trừ tồn kho trong transaction, hết hàng trả 409.
 - Thanh toán Ví/Thẻ mô phỏng, có idempotency (gửi lại cùng khóa không tính tiền hai lần).
 - Xem chi tiết, trạng thái và lịch sử đơn; trang đơn tự làm mới mỗi 5 giây.
-- API cho nhân viên: xem hàng đợi và chuyển trạng thái đơn theo thứ tự (`/staff/orders`).
+- Nhân viên: trang `/staff` xem hàng đợi đơn (Đơn mới, Đang pha chế, Sẵn sàng nhận) và chuyển trạng thái theo thứ tự; API tương ứng `/staff/orders`. Tài khoản nhân viên khai báo bằng biến môi trường `STAFF_EMAILS`.
 - `GET /health` kiểm tra API và database, trả phiên bản (commit SHA).
 
 ## Hạ tầng
@@ -25,7 +25,7 @@ Bản bàn giao Assignment 2 – Công nghệ Phần mềm (Trường Đại h�
 
 ## Chưa hiện thực
 - FR-08 Mã khuyến mãi (Should), FR-14 Tích điểm (Could).
-- Giao diện cho nhân viên (hiện chỉ có API) và hủy đơn kèm hoàn kho.
+- Hủy đơn kèm hoàn kho.
 
 ## Giới hạn đã biết
 - Thanh toán là mô phỏng, không có tích hợp cổng thật (ADR-005, ADR-008).
