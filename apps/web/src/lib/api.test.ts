@@ -4,7 +4,9 @@ import {
   fetchOrders,
   fetchProduct,
   fetchProducts,
+  fetchStaffOrders,
   payOrder,
+  updateOrderStatus,
 } from './api';
 
 function mockFetch(response: Partial<Response>) {
@@ -99,5 +101,57 @@ describe('payOrder', () => {
     expect(error).toBeInstanceOf(ApiError);
     expect((error as ApiError).status).toBe(409);
     expect((error as ApiError).message).toBe('Đơn đã thanh toán');
+  });
+});
+
+describe('fetchStaffOrders', () => {
+  it('gọi GET /staff/orders kèm token', async () => {
+    const fn = mockFetch({ ok: true, json: async () => [] });
+
+    await expect(fetchStaffOrders('staff-token')).resolves.toEqual([]);
+
+    const [url, init] = fn.mock.calls[0] as [string, RequestInit];
+    expect(url).toMatch(/\/staff\/orders$/);
+    expect((init.headers as Record<string, string>).Authorization).toBe(
+      'Bearer staff-token',
+    );
+  });
+
+  it('ném ApiError 403 khi không phải nhân viên', async () => {
+    mockFetch({
+      ok: false,
+      status: 403,
+      json: async () => ({ message: 'Chỉ nhân viên mới được thực hiện thao tác này' }),
+    });
+
+    await expect(fetchStaffOrders('khach-token')).rejects.toMatchObject({
+      status: 403,
+      message: 'Chỉ nhân viên mới được thực hiện thao tác này',
+    });
+  });
+});
+
+describe('updateOrderStatus', () => {
+  it('gửi PATCH tới /staff/orders/:id/status với trạng thái mới', async () => {
+    const fn = mockFetch({ ok: true, json: async () => ({ id: 5, status: 'READY' }) });
+
+    await updateOrderStatus('staff-token', 5, 'READY');
+
+    const [url, init] = fn.mock.calls[0] as [string, RequestInit];
+    expect(url).toMatch(/\/staff\/orders\/5\/status$/);
+    expect(init.method).toBe('PATCH');
+    expect(JSON.parse(init.body as string)).toEqual({ status: 'READY' });
+  });
+
+  it('ném ApiError 409 khi nhảy bước trạng thái', async () => {
+    mockFetch({
+      ok: false,
+      status: 409,
+      json: async () => ({ message: 'Không thể chuyển đơn từ PAID sang COMPLETED' }),
+    });
+
+    await expect(
+      updateOrderStatus('staff-token', 5, 'COMPLETED'),
+    ).rejects.toMatchObject({ status: 409 });
   });
 });
