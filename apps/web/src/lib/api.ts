@@ -168,3 +168,31 @@ export function payOrder(
     'Thanh toán không thành công',
   );
 }
+
+export type StaffSettableStatus = 'PREPARING' | 'READY' | 'COMPLETED';
+
+export type StaffOrderView = OrderView & {
+  user?: { email: string };
+};
+
+export function fetchStaffOrders(token: string): Promise<StaffOrderView[]> {
+  return authedJson(
+    token,
+    '/staff/orders',
+    {},
+    'Không tải được hàng đợi đơn',
+  );
+}
+
+export function updateOrderStatus(
+  token: string,
+  id: number,
+  status: StaffSettableStatus,
+): Promise<OrderView> {
+  return authedJson(
+    token,
+    `/staff/orders/${id}/status`,
+    { method: 'PATCH', body: JSON.stringify({ status }) },
+    'Không cập nhật được trạng thái đơn',
+  );
+}
